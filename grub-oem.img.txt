@@ -152,7 +152,7 @@
 
 # end of directory entry (all zeroes)
 
-# ---- 3th sector (2st cluster): file contents ----
+# ---- 3th sector (2nd cluster): file contents ----
 
 # 'set linux_console="console=ttyS0,115200n8"'
 00000600: 73
