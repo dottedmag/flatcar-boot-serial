@@ -14,7 +14,7 @@
 #
 # CoreOS/Flatcar use GRUB to compose Linux command line, and console is set
 # to "console=ttyS0,115200n8 console=tty0", so the primary console is
-# graphical VT, not available during non-graphical Qemu start.
+# graphical VT, not available during non-graphical QEMU session.
 #
 # During boot CoreOS/Flatcar GRUB searches a filesystem with label OEM,
 # mounts it and reads "grub.cfg" file from it.
