@@ -1,0 +1,203 @@
+#
+# When Flatcar/CoreOS are booted under QEMU without graphical console and
+# Ignition fails nothing is printed to the console and emergency shell is not
+# available.
+#
+# CoreOS/Flatcar early boot is implemented by Dracut. It uses /dev/console for
+# its output and for running the emergency shell if needed.
+#
+# /dev/console is the primary Linux console. Linux may have several consoles
+# and it duplicates kmsg output to several consoles, but only one is designated
+# primary and attached to /dev/console.
+#
+# Primary console is the _last_ value of key console= on Linux command line.
+#
+# CoreOS/Flatcar use GRUB to compose Linux command line, and console is set
+# to "console=ttyS0,115200n8 console=tty0", so the primary console is
+# graphical VT, not available during non-graphical Qemu start.
+#
+# During boot CoreOS/Flatcar GRUB searches a filesystem with label OEM,
+# mounts it and reads "grub.cfg" file from it.
+#
+# This allows us to override default console value. Indeed, CoreOS/Flatcar GRUB
+# configuration conveniently has a variable linux_console for this purpose.
+#
+# CoreOS/Flatcar disk image contains a filesystem labeled OEM, initially empty.
+#
+# Adding a file to that filesystem is complicated, as it is ext4, and tools to
+# operate on ext4 filesystem in a disk image are lacking. An alternative,
+# loop-mounting disk image with a filesystem, requires root privileges.
+#
+# Given that the filesystem is empty, it is easier to replace the whole
+# filesystem rather than modifying it in-place.
+#
+# GRUB2 supports many filesystems, so we have a choice, but most of them are
+# hard to create.
+#
+# FAT12 seems to be the simplest one to do, as it requires a handful of magic
+# numbers and metadata numbers, one FAT sector, one directory sector and one
+# file sector.
+#
+# This file contains a small FAT12 filesystem that contains a single file
+# GRUB.CFG with contents 'set linux_console="console=ttyS0,115200n8"'.
+#
+# This value will make serial port the only console for CoreOS/Flatcar.
+#
+
+# ---- 0th sector: boot sector & FAT metadata ----
+
+# -- BIOS Parameter Block
+
+# 512 bytes per logical sector
+0000000b: 00
+0000000c: 02
+
+# 1 logical sector per cluster (512 bytes per cluster)
+0000000d: 01
+
+# 1 reserved logical sector before FAT (this sector)
+0000000e: 01
+0000000f: 00
+
+# 1 FAT copy
+00000010: 01
+
+# 16 entries in root directory (1 logical sector)
+00000011: 10
+00000012: 00
+
+# 4 total logical sectors on disk (2048 bytes)
+00000013: 04
+00000014: 00
+
+# Media descriptor ("other media")
+00000015: f0
+
+# 1 logical sector for FAT table
+00000016: 01
+00000017: 00
+
+# -- Extended BIOS Parameter Block
+
+# Extended boot signature
+00000026: 29
+
+# Partition Volume Label "OEM        "
+0000002b: 4f
+0000002c: 45
+0000002d: 4d
+0000002e: 20
+0000002f: 20
+00000030: 20
+00000031: 20
+00000032: 20
+00000033: 20
+00000034: 20
+00000035: 20
+
+# Filesystem type "FAT12   "
+
+00000036: 46
+00000037: 41
+00000038: 54
+00000039: 31
+0000003a: 32
+0000003b: 20
+0000003c: 20
+0000003d: 20
+
+# -- boot sector signature
+000001fe: 55
+000001ff: aa
+
+# ---- 1th sector: FAT12 ----
+
+# FAT ID
+00000200: f0
+# FAT ID / Reserved cluster
+00000201: ff
+# Reserved cluster
+00000202: ff
+# End of file chain
+00000204: ff
+# End of file chain / empty
+00000206: 0f
+
+# ---- 2th sector (1th cluster): root directory ----
+
+# file entry
+
+# file name: "GRUB.CFG"
+00000400: 47
+00000401: 52
+00000402: 55
+00000403: 42
+00000404: 20
+00000405: 20
+00000406: 20
+00000407: 20
+00000408: 43
+00000409: 46
+0000040a: 47
+
+# pointer to first cluster of file
+0000041a: 02
+0000041b: 00
+
+# size (43 bytes)
+0000041c: 2b
+0000041d: 00
+0000041e: 00
+0000041f: 00
+
+# end of directory entry (all zeroes)
+
+# ---- 3th sector (2st cluster): file contents ----
+
+# 'set linux_console="console=ttyS0,115200n8"'
+00000600: 73
+00000601: 65
+00000602: 74
+00000603: 20
+00000604: 6c
+00000605: 69
+00000606: 6e
+00000607: 75
+00000608: 78
+00000609: 5f
+0000060a: 63
+0000060b: 6f
+0000060c: 6e
+0000060d: 73
+0000060e: 6f
+0000060f: 6c
+00000610: 65
+00000611: 3d
+00000612: 22
+00000613: 63
+00000614: 6f
+00000615: 6e
+00000616: 73
+00000617: 6f
+00000618: 6c
+00000619: 65
+0000061a: 3d
+0000061b: 74
+0000061c: 74
+0000061d: 79
+0000061e: 53
+0000061f: 30
+00000620: 2c
+00000621: 31
+00000622: 31
+00000623: 35
+00000624: 32
+00000625: 30
+00000626: 30
+00000627: 6e
+00000628: 38
+00000629: 22
+0000062a: 0a
+
+# ... until the end of sector
+000007ff: 00
